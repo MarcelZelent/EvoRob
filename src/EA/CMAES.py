@@ -1,9 +1,7 @@
 import os
 from typing import Dict
-
 import numpy as np
 import cma
-
 from src.utils.Filesys import search_file_list
 
 CMAES_opts = {
@@ -26,9 +24,9 @@ class CMAES():
         self.current_sigma = opts["mutation_sigma"]
         self.f_new = np.empty(self.n_pop)
 
-        self.cmaes = self.load_cmaes() #TODO
+        self.cmaes = self.load_cmaes()
 
-        #% bookkeeping
+        # Bookkeeping
         self.directory_name = output_dir
         self.full_x = []
         self.full_fitness = []
@@ -38,26 +36,31 @@ class CMAES():
         self.f = [-np.inf]*self.n_pop
 
     def load_cmaes(self):
-        #TODO
-        lower_bounds = ...  # lower bounds per dimension !! check dimensions
-        upper_bounds = ...  # upper bounds per dimension
-        cmaes_params = {
-            'popsize': ...,
-            'bounds': (lower_bounds, upper_bounds),
+        # Initialize CMA-ES with bounds
+        lower_bounds = [self.min] * self.n_params
+        upper_bounds = [self.max] * self.n_params
+        
+        inopts = {
+            'popsize': self.n_pop,
+            'bounds': [lower_bounds, upper_bounds],
         }
-        return cma.CMAEvolutionStrategy(..., ..., inopts=cmaes_params)
+        
+        return cma.CMAEvolutionStrategy(
+            self.current_mean,  # Initial mean
+            self.current_sigma,  # Initial step size
+            inopts=inopts
+        )
 
     def ask(self):
-        #TODO
-        new_population = ...
-        return new_population
+        # Get new candidate solutions from CMA-ES
+        new_population = self.cmaes.ask()
+        return np.clip(new_population, self.min, self.max)  # Ensure bounds
 
     def tell(self, solutions, function_values, save_checkpoint=True):
-        #TODO
-        self.cmaes.tell(..., ...)
-
-
-        #% Some bookkeeping
+        # Update CMA-ES with evaluation results
+        self.cmaes.tell(solutions, function_values)
+        
+        # Bookkeeping
         self.full_fitness.append(function_values)
         self.full_x.append(solutions)
         self.f = function_values
@@ -68,20 +71,18 @@ class CMAES():
             self.f_best_so_far = function_values[best_index]
             self.x_best_so_far = solutions[best_index]
 
-
         if self.current_gen % 5 == 0:
             print(f"Generation {self.current_gen}:\t{self.f_best_so_far}\n"
-                  f"Mean fitness:\t{self.f.mean()} +- {self.f.std()}\n"
-                  )
+                  f"Mean fitness:\t{np.mean(function_values)} +- {np.std(function_values)}\n"
+                  f"Current sigma:\t{self.cmaes.sigma}\n")
 
         if save_checkpoint:
             self.save_checkpoint()
         self.current_gen += 1
 
     def initialise_x0(self, num_parameters):
-        #TODO
-        mean_vector = ...
-        return mean_vector
+        # Initialize mean uniformly within bounds
+        return np.random.uniform(self.min, self.max, num_parameters)
 
     def save_checkpoint(self):
         curr_gen_path = os.path.join(self.directory_name, str(self.current_gen))
@@ -95,11 +96,11 @@ class CMAES():
 
     def load_checkpoint(self):
         dir_path = search_file_list(self.directory_name, 'f_best.npy')
-        assert len(dir_path) > 0;
-        "No files are here, check the directory_name!!"
-
+        assert len(dir_path) > 0, "No files found, check the directory_name!"
+        
         self.current_gen = int(dir_path[-1].split('/')[-2])
         curr_gen_path = os.path.join(self.directory_name, str(self.current_gen))
+        
         print(f"Loading from: {curr_gen_path}")
         self.full_fitness = np.load(os.path.join(self.directory_name, 'full_f.npy'))
         self.full_x = np.load(os.path.join(self.directory_name, 'full_x.npy'))
@@ -108,6 +109,7 @@ class CMAES():
         self.x = np.load(os.path.join(curr_gen_path, 'x.npy'))
         self.f = np.load(os.path.join(curr_gen_path, 'f.npy'))
 
+        # Reinitialize CMA-ES and replay history
         self.cmaes = self.load_cmaes()
         for x, f in zip(self.full_x, self.full_fitness):
             self.cmaes.tell(x, f)

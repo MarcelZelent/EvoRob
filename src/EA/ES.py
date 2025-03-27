@@ -49,7 +49,7 @@ class ES:
 
     def ask(self):
         if self.current_gen==0:
-            new_population = self.initialise_x0()
+            new_population = np.tile(self.initialise_x0(), (self.n_pop, 1))
         else:
             new_population = self.generate_mutated_offspring(self.n_pop)
         new_population = np.clip(new_population, self.min, self.max)
@@ -86,43 +86,83 @@ class ES:
 
     def initialise_x0(self,):
         #TODO
-        mean_vector = ...
+        # print(f"gen: ", self.current_gen)
+        # print(f'nparams:', self.n_params)
+        mean_vector = np.random.uniform(low=self.min, high=self.max, size=(self.n_params,))
+        # print(f'mean:', mean_vector)
         return mean_vector
 
     def generate_mutated_offspring(self, population_size):
         # TODO
-        population = ...
+
+        population = np.tile(self.current_mean, (population_size, 1))
 
         # Compute multivariate Gaussian noise
-        mutation = ...
+        # mutation = ...
 
         # Compute offspring
-        mutated_population = ...
+        # mutated_population = ...
+
+        # Compute multivariate Gaussian noise
+        num_parameters = len(self.current_mean)
+        perturbation = np.random.normal(
+            loc=0.0, scale=1.0, size=(population_size, num_parameters)
+        )
+
+        # Compute offspring
+        mutated_population = population + self.current_sigma * perturbation
 
         return mutated_population
 
+    # def sort_and_select_parents(self, population, fitness, num_parents):
+    #     # TODO
+    #     parent_population = ...
+    #     parent_fitness = ...
+    #     return parent_population, parent_fitness
+    
     def sort_and_select_parents(self, population, fitness, num_parents):
-        # TODO
-        parent_population = ...
-        parent_fitness = ...
+        sorted_indices = np.argsort(fitness)[::-1]
+        sorted_indices = sorted_indices[0:num_parents]
+
+        parent_population = population[sorted_indices]
+        parent_fitness = fitness[sorted_indices]
+
         return parent_population, parent_fitness
 
+    # def update_population_mean(self, parent_population, parent_fitness):
+    #     # TODO
+    #     # Normalise parent fitness scores
+    #     normed_parents_fitness = ...
+
+    #     # Compute population weighted to the normed fitness scores
+    #     weighted_parents_population = ...
+
+    #     # Calculate the sum of weighted parents population
+    #     updated_mean_vector = ...
+
+    #     return updated_mean_vector
+    
     def update_population_mean(self, parent_population, parent_fitness):
-        # TODO
         # Normalise parent fitness scores
-        normed_parents_fitness = ...
+        normed_parents_fitness = parent_fitness / np.sum(parent_fitness)
 
         # Compute population weighted to the normed fitness scores
-        weighted_parents_population = ...
+        weight = np.outer(normed_parents_fitness, np.ones((1, parent_population.shape[1])))
+        weighted_parents_population = np.multiply(
+            parent_population, weight
+        )  # hadamard product
 
-        # Calculate the sum of weighted parents population
-        updated_mean_vector = ...
+        # Calculate mean of weighted parents population along y-axis
+        updated_mean_vector = np.sum(weighted_parents_population, axis=0)
 
         return updated_mean_vector
 
     def update_sigma(self):
         #TODO
-        minimum_sigma = ...
+        minimum_sigma = self.sigma_limit
+        # sigma = self.current_sigma
+        decay_rate = 0.99  # Slight reduction per generation
+        self.current_sigma = max(self.sigma_limit, self.current_sigma * decay_rate)
         sigma = self.current_sigma
         param_size = self.n_params
         return sigma
