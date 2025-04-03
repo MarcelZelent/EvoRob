@@ -39,7 +39,7 @@ class CheetahWorld(World):
         state_space = self.env.observation_space.shape[0]  # https://gymnasium.farama.org/environments/mujoco/half_cheetah/#observation-space
         self.controller = MLP.NNController(state_space, action_space)
         self.dt = self.env.get_wrapper_attr('dt')
-        self.n_params = ...  # TODO
+        self.n_params = self.controller.n_params  # TODO
 
     def geno2pheno(self, genotype):
         self.controller.geno2pheno(genotype)
