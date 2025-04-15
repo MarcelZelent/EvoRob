@@ -52,7 +52,8 @@ class CheetahWorld(World):
         self.geno2pheno(genotype)
 
         rewards_list = []
-        observations, info = self.env.reset(seed=42)
+        # observations, info = self.env.reset(seed=42)
+        observations, info = self.env.reset()
         for step in range(n_sim_steps):
             action = self.controller.get_action(observations)
             observations, rewards, terminated, truncated, info = self.env.step(action)
@@ -86,7 +87,7 @@ def generate_best_individual_video(controller, video_name: str = 'EvoRob1_video.
         rewards_list.append(rewards)
         if terminated:
             break
-    print(np.sum(rewards_list))
+    print(f"sum of rewards(?): ", np.sum(rewards_list))
 
     import imageio
     imageio.mimsave(video_name, frames, fps=30)  # Set frames per second (fps)
@@ -99,31 +100,41 @@ def main():
     n_parameters = world.n_params
 
     # TODO: improve the ES settings
-    CMAES_opts["min"] = -10
-    CMAES_opts["max"] = 10
-    CMAES_opts["num_parents"] = 100
-    CMAES_opts["num_generations"] = 100
-    CMAES_opts["mutation_sigma"] = 2.5
+    ## ORIGINAL
+    # CMAES_opts["min"] = -10     
+    # CMAES_opts["max"] = 10
+    # CMAES_opts["num_parents"] = 100 
+    # CMAES_opts["num_generations"] = 100
+    # CMAES_opts["mutation_sigma"] = 2.5
 
-    population_size = 50
+    # population_size = 50
 
-    results_dir = os.path.join(ROOT_DIR, 'results', ENV_NAME, 'CMAES')
-    ea = CMAES(population_size, n_parameters, CMAES_opts, results_dir)
+    # CMAES_opts["min"] = -10     
+    # CMAES_opts["max"] = 10
+    # CMAES_opts["num_parents"] = 100
+    # CMAES_opts["num_generations"] = 100
+    # CMAES_opts["mutation_sigma"] = 2.5
 
-    run_EA(ea, world)
+    # population_size = 200
 
-    # %% Make video of best behaviour
-    best_individual = np.load(os.path.join(results_dir, f"{CMAES_opts["num_generations"]-1}", "x_best.npy"))
-    world.controller.geno2pheno(best_individual)
+    # results_dir = os.path.join(ROOT_DIR, 'results', ENV_NAME, 'CMAES')
+    # ea = CMAES(population_size, n_parameters, CMAES_opts, results_dir)
 
-    generate_best_individual_video(world.controller)
+    # run_EA(ea, world)
+
+    # # %% Make video of best behaviour
+    # best_individual = np.load(os.path.join(results_dir, f"{CMAES_opts["num_generations"]-1}", "x_best.npy"))
+    # world.controller.geno2pheno(best_individual)
+
+    # generate_best_individual_video(world.controller)
 
     # %% Compare with PPO
     env = gym.make(ENV_NAME)
     ppo = PPO("MlpPolicy", env, device=torch.device('cpu'))
     trial_time = 50  # seconds in simulation
     n_sim_steps = int(trial_time / world.dt)
-    n_total_steps = ...  # TODO
+    n_total_steps = 2000000  # TODO
+
     ppo.learn(total_timesteps=n_total_steps)
     ppo_controller = PPO_controller(ppo)
 
@@ -131,6 +142,7 @@ def main():
     env = gym.make(ENV_NAME, render_mode='human')
     observations, info = env.reset()
     for step in range(n_sim_steps):
+        print("Step: ", step)
         action = ppo_controller.get_action(observations)
         observations, rewards, terminated, truncated, info = env.step(action)
         rewards_list.append(rewards)
