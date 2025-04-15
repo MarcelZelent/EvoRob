@@ -52,8 +52,8 @@ class CheetahWorld(World):
         self.geno2pheno(genotype)
 
         rewards_list = []
-        # observations, info = self.env.reset(seed=42)
-        observations, info = self.env.reset()
+        observations, info = self.env.reset(seed=42)
+        # observations, info = self.env.reset()
         for step in range(n_sim_steps):
             action = self.controller.get_action(observations)
             observations, rewards, terminated, truncated, info = self.env.step(action)
@@ -135,6 +135,7 @@ def main():
     n_sim_steps = int(trial_time / world.dt)
     n_total_steps = 2000000  # TODO
 
+    print("Going into ppo.learn")
     ppo.learn(total_timesteps=n_total_steps)
     ppo_controller = PPO_controller(ppo)
 
@@ -142,7 +143,7 @@ def main():
     env = gym.make(ENV_NAME, render_mode='human')
     observations, info = env.reset()
     for step in range(n_sim_steps):
-        print("Step: ", step)
+        # print("Step: ", step)
         action = ppo_controller.get_action(observations)
         observations, rewards, terminated, truncated, info = env.step(action)
         rewards_list.append(rewards)
